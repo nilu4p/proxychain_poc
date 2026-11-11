@@ -102,7 +102,7 @@ Le processus a été pensé pour être **"One-Click"**. Terraform va préparer l
 
 ---
 
-## 🎮 Utilisation post-déploiement
+## Utilisation post-déploiement
 
 Une fois `terraform apply` terminé, Terraform affichera un bloc d'**Outputs** détaillant toutes les adresses IP et les commandes SSH prêtes à l'emploi.
 
