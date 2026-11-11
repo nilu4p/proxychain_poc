@@ -20,7 +20,7 @@ L'infrastructure se divise en deux réseaux virtuels distincts pour simuler une 
 ```mermaid
 graph LR
     subgraph "Réseau Privé (10.10.10.0/24)"
-        Client([💻 Client Infecté])
+        Client([Client Infecté])
     end
 
     subgraph "Passerelle"
@@ -28,10 +28,10 @@ graph LR
     end
 
     subgraph "Réseau Public / NAT (10.10.20.0/24)"
-        Entry[🛡️ Entry Node <br/> Port 8080]
-        Middle[🛡️ Middle Node <br/> Port 9000]
-        Exit[🛡️ Exit Node <br/> Port 10000]
-        C2[(🏴‍☠️ C2 Mythic <br/> Port 80 & 7443)]
+        Entry[Entry Node <br/> Port 8080]
+        Middle[Middle Node <br/> Port 9000]
+        Exit[Exit Node <br/> Port 10000]
+        C2[(C2 Mythic <br/> Port 80 & 7443)]
     end
 
     Client -->|Route par défaut| Router
