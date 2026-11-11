@@ -1,0 +1,6 @@
+[proxy]
+listen_port = {{ listen_port | default('8080') }}
+forward_to = {{ forward_to | default('127.0.0.1:9000') }}
+encryption_key = {{ encryption_key | default('ChangeMe123!') }}
+log_file = {{ system.log_dir | default('/var/log/proxy') }}/proxy.log
+log_level = INFO

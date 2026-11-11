@@ -1,0 +1,60 @@
+*.img
+seed/
+# === TERRAFORM ===
+# Fichiers de données et états locaux (sensibles / spécifiques à l'environnement)
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+*.auto.tfvars
+*.auto.tfvars.json
+
+# Dossier de cache local des providers et modules
+.terraform/
+.terraform.lock.hcl
+
+# Fichiers de plan Terraform sauvegardés
+*.tfplan
+
+# === ANSIBLE ===
+# Fichiers de retry générés en cas d'échec de playbook
+*.retry
+
+# Fichiers de mots de passe Ansible Vault locaux
+.vault_pass
+*.vault
+
+# Rôles et collections installés localement via Ansible Galaxy (optionnel selon votre gestion)
+# roles/
+# collections/
+
+# === PYTHON (modules / plugins personnalisés) ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+env/
+
+# === OS & ÉDITEURS ===
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# IDEs & Éditeurs (VS Code, PyCharm, etc.)
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+.deploy.lock
+.agent_code/

@@ -1,0 +1,89 @@
+---
+# Préparation commune : cloud-init doit avoir terminé avant toute orchestration
+- name: Préparer toutes les VM
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Attendre que la VM soit joignable en SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 300
+
+    - name: Attendre la fin de cloud-init
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      register: cloud_init_status
+      failed_when: cloud_init_status.rc not in [0, 2]
+
+    - name: Déclarer les noms des VM sur le réseau privé
+      ansible.builtin.blockinfile:
+        path: /etc/hosts
+        marker: "# {mark} VM du réseau privé (Ansible)"
+        block: |
+          {% for host in groups['all'] %}
+          {{ hostvars[host].private_ip }} {{ hostvars[host].private_hostname }}
+          {% endfor %}
+
+# ====================================================================
+# Orchestration des nœuds spécifiques
+# ====================================================================
+
+- name: Configuration du Routeur
+  hosts: router
+  become: true
+  tasks:
+    - name: Activer le routage IP de façon persistante
+      ansible.builtin.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+
+    - name: Configurer le NAT sortant (Masquerade)
+      ansible.builtin.iptables:
+        table: nat
+        chain: POSTROUTING
+        source: 10.10.10.0/24
+        out_interface: enp1s0
+        jump: MASQUERADE
+
+- name: Déploiement C2
+  hosts: c2
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Importer les tâches C2
+      ansible.builtin.import_tasks: tasks/c2_task.yml
+
+- name: Déploiement Exit Node
+  hosts: exit_node
+  gather_facts: false
+  become: true
+  vars:
+    listen_port: "10000"
+    forward_to: "{{ hostvars['c2'].ansible_host }}:80"
+  tasks:
+    - name: Importer les tâches Proxy
+      ansible.builtin.import_tasks: tasks/proxy_task.yml
+
+- name: Déploiement Middle Node
+  hosts: middle_node
+  gather_facts: false
+  become: true
+  vars:
+    listen_port: "9000"
+    forward_to: "{{ hostvars['exit_node'].ansible_host }}:10000"
+  tasks:
+    - name: Importer les tâches Proxy
+      ansible.builtin.import_tasks: tasks/proxy_task.yml
+
+- name: Déploiement Entry Node
+  hosts: entry_node
+  gather_facts: false
+  become: true
+  vars:
+    listen_port: "8080"
+    forward_to: "{{ hostvars['middle_node'].ansible_host }}:9000"
+  tasks:
+    - name: Importer les tâches Proxy
+      ansible.builtin.import_tasks: tasks/proxy_task.yml

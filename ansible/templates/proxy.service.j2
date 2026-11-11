@@ -1,0 +1,14 @@
+[Unit]
+Description=Proxy Chain Service
+After=network.target
+
+[Service]
+Type=simple
+User={{ system.proxy_user | default('proxyuser') }}
+Group={{ system.proxy_group | default('proxygroup') }}
+ExecStart=/usr/bin/python3 /usr/local/bin/proxy.py --config {{ system.config_dir | default('/etc/proxy') }}/proxy.conf
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

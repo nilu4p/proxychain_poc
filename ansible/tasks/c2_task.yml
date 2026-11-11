@@ -1,0 +1,114 @@
+---
+- name: Installer les dépendances système
+  apt:
+    name:
+      - git
+      - build-essential
+      - python3
+      - python3-pip
+      - docker.io
+      - docker-compose-v2
+      - ufw
+    state: present
+    update_cache: yes
+
+- name: Démarrer et activer Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Ajouter l'utilisateur ubuntu au groupe docker
+  user:
+    name: ubuntu
+    groups: docker
+    append: yes
+
+- name: Cloner le dépôt Mythic
+  git:
+    repo: https://github.com/its-a-feature/Mythic.git
+    dest: /opt/Mythic
+    update: no
+
+- name: Compiler Mythic avec make
+  command: make
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/Mythic/mythic-cli
+  become: yes
+
+- name: Copier le binaire mythic-cli dans /opt
+  command: cp mythic-cli /opt/mythic-cli
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/mythic-cli
+  become: yes
+
+- name: Générer la configuration par défaut de Mythic (.env)
+  command: ./mythic-cli config
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/Mythic/.env
+  become: yes
+
+- name: Modifier les identifiants administrateur dans .env
+  lineinfile:
+    path: /opt/Mythic/.env
+    regexp: "^{{ item.key }}="
+    line: "{{ item.key }}={{ item.value }}"
+  loop:
+    - { key: 'MYTHIC_ADMIN_USER', value: 'mythic' }
+    - { key: 'MYTHIC_ADMIN_PASSWORD', value: 'mythic' }
+  become: yes
+
+# 1. D'abord, on démarre Mythic pour initialiser les conteneurs et la base de données
+- name: Démarrer Mythic
+  command: ./mythic-cli start
+  args:
+    chdir: /opt/Mythic
+  become: yes
+
+# 2. Ensuite, une fois les services actifs, on installe les composants
+- name: Installer le profil C2 HTTP via le CLI Mythic
+  command: ./mythic-cli install github https://github.com/MythicC2Profiles/http
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/Mythic/C2_Profiles/http
+  become: yes
+
+- name: Installer l'agent Poseidon via le CLI Mythic
+  command: ./mythic-cli install github https://github.com/MythicAgents/Poseidon
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/Mythic/Payload_Types/Poseidon
+  become: yes
+  
+- name: Installer l'agent Apollo via le CLI Mythic
+  command: ./mythic-cli install github https://github.com/MythicAgents/Apollo
+  args:
+    chdir: /opt/Mythic
+    creates: /opt/Mythic/Payload_Types/Apollo
+  become: yes
+
+# 3. On redémarre une dernière fois pour que Mythic prenne en compte les nouveaux services installés
+- name: Redémarrer Mythic pour charger les services
+  command: ./mythic-cli restart
+  args:
+    chdir: /opt/Mythic
+  become: yes
+
+- name: Configurer le pare-feu pour Mythic
+  ufw:
+    rule: allow
+    port: '7443'
+    proto: tcp
+    comment: 'Mythic Web Interface'
+  become: yes
+
+- name: Configurer le pare-feu pour le C2 HTTP
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+    comment: 'Mythic C2 HTTP'
+  become: yes

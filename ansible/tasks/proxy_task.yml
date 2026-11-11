@@ -1,0 +1,58 @@
+---
+- name: Copier le script proxy.py sur le nœud
+  copy:
+    src: proxy.py
+    dest: /usr/local/bin/proxy.py
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Créer le groupe système proxy
+  group:
+    name: "{{ system.proxy_group | default('proxygroup') }}"
+    system: yes
+    state: present
+
+- name: Créer l'utilisateur système proxy
+  user:
+    name: "{{ system.proxy_user | default('proxyuser') }}"
+    group: "{{ system.proxy_group | default('proxygroup') }}"
+    system: yes
+    create_home: no
+    shell: /usr/sbin/nologin
+    state: present
+
+- name: Créer les répertoires de configuration et de logs
+  file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ system.proxy_user | default('proxyuser') }}"
+    group: "{{ system.proxy_group | default('proxygroup') }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ system.config_dir | default('/etc/proxy') }}", mode: '0755' }
+    - { path: "{{ system.log_dir | default('/var/log/proxy') }}", mode: '0755' }
+
+- name: Create proxy configuration file
+  template:
+    src: proxy.conf.j2
+    dest: "{{ system.config_dir | default('/etc/proxy') }}/proxy.conf"
+    owner: "{{ system.proxy_user | default('proxyuser') }}"
+    group: "{{ system.proxy_group | default('proxygroup') }}"
+    mode: '0644'
+
+- name: Create systemd service file
+  template:
+    src: proxy.service.j2
+    dest: /etc/systemd/system/proxy.service
+    mode: '0644'
+
+- name: Reload systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Enable and start proxy service
+  systemd:
+    name: proxy
+    state: started
+    enabled: yes
